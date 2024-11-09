@@ -19,4 +19,5 @@ This project contains a Flask application that captures IP addresses and locatio
 
    ```bash
    git clone https://github.com/JoePerry-Byte/My-Flask-App.git
-   cd my-flask-app
+   cd My-Flask-App
+   
