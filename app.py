@@ -11,8 +11,8 @@ from email.mime.text import MIMEText
 app = Flask(__name__)
 
 # Email configuration
-EMAIL_ADDRESS = "your_email@gmail.com"  # Replace with your email
-EMAIL_PASSWORD = "your_email_password"  # Replace with your email password
+EMAIL_ADDRESS = "joeperry05i2@gmail.com"  # Replace with your email
+EMAIL_PASSWORD = "Aq@5gY8Vb"  # Replace with your email password
 RECEIVER_EMAIL = "receiver_email@gmail.com"  # Replace with your recipient email
 
 # Tracking link configuration
