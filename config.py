@@ -13,8 +13,8 @@ SERVER_PORT = 5000       # Port for Flask
 # Email settings for sending captured information
 EMAIL_HOST = "smtp.gmail.com"   # Change to your email provider (e.g., smtp.mailtrap.io for testing)
 EMAIL_PORT = 587                # Port for Gmail TLS
-EMAIL_USER = os.getenv("EMAIL_USER", "joeperry05i2@gmail.com")  # Email address (use env var for security)
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "Aq@5gY8Vb")  # App password or actual password (env var)
+EMAIL_USER = os.getenv("EMAIL_USER", "")  # Email address (use env var for security)
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "")  # App password or actual password (env var)
 
 # WhatsApp and Telegram API settings for messaging
 WHATSAPP_API_KEY = os.getenv("WHATSAPP_API_KEY", "your-whatsapp-api-key")  # WhatsApp API key (use environment variable)
