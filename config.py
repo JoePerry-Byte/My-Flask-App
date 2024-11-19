@@ -32,7 +32,7 @@ DATABASE_URI = os.getenv("DATABASE_URI", "sqlite:///remote_control_app.db")  # S
 PERSISTENCE_INTERVAL = 60  # Interval (in seconds) to check for persistent connection status
 
 # Admin settings for the system (could be used to store backup information)
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "joeperry05i2@gmail.com")  # Admin email for alerts
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")  # Admin email for alerts
 ADMIN_PHONE = os.getenv("ADMIN_PHONE", "+1234567890")  # Admin phone number for SMS alerts or notifications
 
 # Paths and directories (for saving logs, backups, etc.)
